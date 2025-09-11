@@ -12,7 +12,7 @@ const app = express();
 await connectDB();
 
 app.use(express.json())
-app.use("/uploads", express.static("uploads")); // serve uploaded files
+
 app.use(cors());
 app.use(clerkMiddleware());
 
