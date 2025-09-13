@@ -1,5 +1,4 @@
 import { Inngest } from "inngest";
-import mongoose from "mongoose";
 import User from "../models/User.js";
 import Connection from "../models/Connection.js";
 import sendEmail from "../configs/nodeMailer.js";
