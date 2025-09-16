@@ -1,5 +1,4 @@
 
-import { error } from "console"
 import imagekit from "../configs/imageKit.js"
 import Connection from "../models/Connection.js"
 import User from "../models/User.js"
@@ -53,9 +52,10 @@ export const updateUserData  = async (req,res) => {
         const cover = req.files.cover && req.files.cover[0]
 
         if (profile) {
-            const buffer = fs.readFileSync(profile.path)
+            const fileData = profile.buffer;   // directly the binary
+            //  const buffer = fs.readFileSync(profile.path)
             const response = await imagekit.upload({
-                file: buffer,
+                file: fileData,
                 fileName: profile.originalname,  
             })
 
@@ -71,9 +71,10 @@ export const updateUserData  = async (req,res) => {
         }
 
         if (cover) {
-            const buffer = fs.readFileSync(cover.path)
+            const fileData = cover.buffer;
+            //const buffer = fs.readFileSync(cover.path)
             const response = await imagekit.upload({
-                file: buffer,
+                file: fileData,
                 fileName: cover.originalname,  
             })
 

@@ -2,7 +2,8 @@ import fs from 'fs'
 import imagekit from '../configs/imageKit.js';
 import Message from '../models/Message.js';
 //create an empty object to store SS Event Connections
-const connections = {};
+export const connections = {};
+
 
 //Controller function for the SSe endpoint
 export const sseController = (req,res) => {
@@ -40,7 +41,8 @@ export const sendMessage = async (req,res) => {
         let message_type = image ? 'image' : 'text'
 
         if (message_type === 'image') {
-            const fileBuffer = fs.readFileSync(image.path);
+            //const fileBuffer = fs.readFileSync(image.path);
+              const fileBuffer = image.buffer; // use buffer directly
             const response = await imagekit.upload({
                 file: fileBuffer,
                 fileName: image.originalname,
@@ -54,7 +56,7 @@ export const sendMessage = async (req,res) => {
                 ]
             })
         }
-        const message = await Message({
+        const message = await Message.create({
             from_user_id: userId,
             to_user_id,
             text,
@@ -65,12 +67,17 @@ export const sendMessage = async (req,res) => {
         res.json({success: true, message})
 
         //send message to user id using sse
-        const messageWithUserData = await Message.findById(message._id).populate('from_user_id')
+       // const messageWithUserData = await Message.findById(message._id).populate('from_user_id')
+       const messageWithUserData = await Message.findById(message._id)
+      .populate("from_user_id");
         if (connections[to_user_id]) {
-           connections[to_user_id].write(`data: ${JSON.stringify(messageWithUserData)}\n\n`)
-        }
+      connections[to_user_id].write(
+        `data: ${JSON.stringify(messageWithUserData)}\n\n`
+      );
+      }
     } catch (error) {
         console.log({success: false, message: error.message})
+         res.json({ success: false, message: error.message });
     }
 }
 
@@ -100,8 +107,11 @@ export const getChatMessages = async (req,res) => {
 export const getUserRecentMessages = async (req,res) => {
     try {
         const { userId } = req.auth();
-        const messages = await Message.find({to_user_id: userId}.populate('from_user_id to_user_id')).sort({createdAt: -1 });
-        
+        //const messages = await Message.find({to_user_id: userId}.populate('from_user_id to_user_id')).sort({createdAt: -1 });
+        const messages = await Message.find({ to_user_id: userId })
+  .populate('from_user_id to_user_id')
+  .sort({ createdAt: -1 });
+
         res.json({success: true, messages});
     
     } catch (error) {

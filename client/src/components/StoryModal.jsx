@@ -1,6 +1,9 @@
+import { useAuth } from '@clerk/clerk-react'
 import { ArrowLeft, Sparkle, TextIcon, Upload } from 'lucide-react'
 import React, { useState } from 'react'
 import toast from 'react-hot-toast'
+import api from '../api/axios'
+import { data } from 'react-router-dom'
 
 const StoryModal = ({ setShowModal, fetchStories }) => {
 
@@ -11,17 +14,91 @@ const StoryModal = ({ setShowModal, fetchStories }) => {
   const [media, setMedia] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
 
+
+  const { getToken } = useAuth()
+  const MAX_VIDEO_DURATION = 60;//SECONDS
+  const MAX_VIDEO_SIZE_MB = 50; //MB
+
   const handleMediaUpload = (e) => {
     const file = e.target.files?.[0]
     if (file) {
-      setMedia(file)
-      setPreviewUrl(URL.createObjectURL(file))
+      if (file.type.startsWith("video")) {
+        if (file.size > MAX_VIDEO_SIZE_MB * 1024 * 1024) {
+          toast.error(`video file size cannot exceed ${MAX_VIDEO_SIZE_MB} MB.`)
+          setMedia(null)
+          setPreviewUrl(null)
+          return;
+        }
+        const video = document.createElement('video')
+        video.preload = 'metadata';
+        video.onloadedmetadata = () => {
+          window.URL.revokeObjectURL(video.src)
+          if (video.duration > MAX_VIDEO_DURATION) {
+            toast.error("video duration cannot exceed 1 minute.")
+            setMedia(null)
+            setPreviewUrl(null)
+          } else {
+            setMedia(file)
+            setPreviewUrl(URL.createObjectURL(file))
+            setText('')
+            setMode("media")
+          }
+        }
+
+        video.src = URL.createObjectURL(file)
+      } else if (file.type.startsWith("image")) {
+        setMedia(file);
+        setPreviewUrl(URL.createObjectURL(file))
+        setText('')
+        setMode("media")
+      }
     }
   }
 
   const handleCreateStory = async () => {
-    
-  }
+    const media_type =
+      mode === "media"
+        ? media?.type.startsWith("image")
+          ? "image"
+          : "video"
+        : "text";
+
+    console.log({ text, media, media_type, background });  // 👀 Debug
+
+    if (media_type === "text" && !text.trim()) {
+      toast.error("Please enter some text");
+      return;
+    }
+
+    let formData = new FormData();
+    formData.append("content", text);
+    formData.append("media_type", media_type);
+    if (media) formData.append("media", media);
+    formData.append("background_color", background);
+
+    const token = await getToken();
+    try {
+      const { data } = await api.post("/api/story/create", formData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      console.log("API response:", data); // 👀 Debug
+      if (data.success) {
+        setMode("text");
+        setText("");
+        setMedia(null);
+        setPreviewUrl(null);
+        toast.success("Story Created Successfully");
+        fetchStories();
+        setShowModal(false);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.error(error); // 👀 Debug
+      toast.error(error.message);
+    }
+  };
+
 
   return (
     <div className='fixed inset-0 z-110 min-h-screen bg-black/80 backdrop-blur text-white flex items-center justify-center p-4'>
@@ -44,32 +121,31 @@ const StoryModal = ({ setShowModal, fetchStories }) => {
               media?.type.startsWith('image') ? (
                 <img src={previewUrl} alt="" className='object-contain max-h-full' />
               ) : (
-                <video src={previewUrl} className='object-contain max-h-full' />
+                <video src={previewUrl} className='object-contain max-h-full' autoPlay controls muted/>
               )
             )
           }
         </div>
         <div className='flex mt-4 gap-2'>
           {bgColors.map((color) => (
-            <button key={color} className='w-6 h-6 rounded-full ring cursor-pointer' style={{backgroundColor : color}} onClick={()=>setBackground(color)} />
+            <button key={color} className='w-6 h-6 rounded-full ring cursor-pointer' style={{ backgroundColor: color }} onClick={() => setBackground(color)} />
           ))}
         </div>
 
         <div className='flex gap-2 mt-4'>
-          <button onClick={() =>{setMode('text'); setMedia(null); setPreviewUrl(null)} } className={`flex-1 flex items-center justify-center gap-2 p-2 rounded cursor-pointer ${mode ==='text' ? "bg-white text-black" : "bg-zinc-800"}`}> 
-            <TextIcon size={18}/> Text
+          <button onClick={() => { setMode('text'); setMedia(null); setPreviewUrl(null) }} className={`flex-1 flex items-center justify-center gap-2 p-2 rounded cursor-pointer ${mode === 'text' ? "bg-white text-black" : "bg-zinc-800"}`}>
+            <TextIcon size={18} /> Text
           </button>
           <label className={`flex-1 flex items-center justify-center gap-2 p-2 rounded cursor-pointer ${mode === 'media' ? "bg-white text-black" : "bg-zinc-800"}`}>
-            <input onChange={(e)=>{handleMediaUpload(e); setMode('media')}} type="file" accept='image/*, video/*' className='hidden'/>
-            <Upload size={18}/> Photo/Video
+            <input onChange={handleMediaUpload} type="file" accept='image/*, video/*' className='hidden' />
+            <Upload size={18} /> Photo/Video
           </label>
         </div>
-        <button onClick={()=> toast.promise(handleCreateStory(),{
+        <button onClick={() => toast.promise(handleCreateStory(), {
           loading: 'Saving...',
-          success: <p>Story Added</p>,
-          error: e => <p>{e.message}</p>,
+
         })} className='flex items-center justify-center gap-2 text-white py-3 mt-4 w-full rounded bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 active:scale-95 transition cursor-pointer'>
-          <Sparkle size={18}/> Create Story
+          <Sparkle size={18} /> Create Story
         </button>
       </div>
     </div>
