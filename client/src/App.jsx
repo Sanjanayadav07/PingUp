@@ -20,10 +20,12 @@ import { addMessages } from './features/messages/messagesSlice.js'
 import Notification from './components/Notification.jsx'
 
 const App = () => {
-  const { user } = useUser()
+  //const { user } = useUser()
+  const { user, isLoaded } = useUser()
   const { getToken } = useAuth()
   const dispatch = useDispatch()
   const { pathname } = useLocation()
+  
   const pathnameRef = useRef(pathname)
 
   useEffect(() => {
