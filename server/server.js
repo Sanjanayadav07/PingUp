@@ -17,14 +17,14 @@ await connectDB();
 
 app.use(express.json())
 
-
+/*
 app.use(cors({
   origin: "http://localhost:5173", // exact frontend URL
   credentials: true,               // allow cookies/Authorization header
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
-/*
+*/
 const allowedOrigins = [
   "http://localhost:5173",
   "https://ping-up-eight-weld.vercel.app"
@@ -42,7 +42,7 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
-*/
+
 
 
 app.use(clerkMiddleware());
